@@ -270,13 +270,12 @@ function drawDamageText() {
 function drawHUD() {
   players.forEach((p, i) => {
   
-  if (isPlayerInBush(p)) return;
     const x = i === 0 ? 20 : GAME_WIDTH - 200;
     const y = 20;
 
     ctx.fillStyle = "white";
     ctx.font = "14px sans-serif";
-    ctx.fillText(`${p.name} - Ult: ${p.ulti.charge}/100`, x, y + 0);
+    ctx.fillText(`${p.name} - Ult: ${p.ulti.charge}/75`, x, y + 0);
     ctx.fillText(`Dégâts: ${baseStats.damage + p.stats.damage}`, x, y + 20);
     ctx.fillText(`Cadence: ${baseStats.rate - p.stats.rate * 4}`, x, y + 40);
     ctx.fillText(`Portée: ${baseStats.range + p.stats.range * 30}`, x, y + 60);
@@ -405,7 +404,8 @@ function useUltimate(player, target) {
 
 function updateBullets() {
   players.forEach(player => {
-    player.bullets.forEach((b, i) => {
+    for (let i = player.bullets.length - 1; i >= 0; i--) {
+      const b = player.bullets[i];
       b.x += b.dx;
       b.y += b.dy;
       b.distance += Math.sqrt(b.dx * b.dx + b.dy * b.dy);
@@ -413,7 +413,25 @@ function updateBullets() {
       // Limite portée
       if (b.distance > b.maxDistance) {
         player.bullets.splice(i, 1);
-        return;
+        continue;
+      }
+
+      // Collision avec murs
+      let hitWall = false;
+      for (const block of blocks.concat(waterBlocks)) {
+        if (
+          b.x > block.x &&
+          b.x < block.x + block.w &&
+          b.y > block.y &&
+          b.y < block.y + block.h
+        ) {
+          hitWall = true;
+          break;
+        }
+      }
+      if (hitWall) {
+        player.bullets.splice(i, 1);
+        continue;
       }
 
       // Collision avec joueur adverse
@@ -423,8 +441,8 @@ function updateBullets() {
             b.y > target.y - 15 && b.y < target.y + 15) {
           target.hp -= b.damage;
           player.ulti.charge += b.damage * 2;
-          if (player.ulti.charge >= 100) {
-            player.ulti.charge = 100;
+          if (player.ulti.charge >= 75) {
+            player.ulti.charge = 75;
             player.ulti.ready = true;
           }
           damageTexts.push({ x: target.x, y: target.y, amount: b.damage, life: 30 });
@@ -435,7 +453,7 @@ function updateBullets() {
           }
         }
       });
-    });
+    }
   });
 }
 
@@ -547,58 +565,47 @@ function update() {
 }
 
 function drawPlayers() {
-  // Joueurs dans buisson d'abord (z-index -1)
-  players.filter(isPlayerInBush).forEach(p => {
+  players.forEach(p => {
     if (p.dead) return;
-    ctx.fillStyle = p.color;
-// Joueurs dans buisson : invisibles
-ctx.globalAlpha = 0.05;
 
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, 15, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.globalAlpha = 1;
+    if (isPlayerInBush(p)) {
+      // Joueurs dans buisson : dessine joueur avec transparence
+      ctx.globalAlpha = 0.05;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 15, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
 
-    // Barre de vie au-dessus du joueur
-    const barWidth = 40;
-    const barHeight = 6;
-    const hpRatio = p.hp / 100;
-    ctx.fillStyle = 'gray';
-    ctx.fillRect(p.x - barWidth / 2, p.y - 30, barWidth, barHeight);
-    ctx.fillStyle = 'lime';
-    ctx.fillRect(p.x - barWidth / 2, p.y - 30, barWidth * hpRatio, barHeight);
+      // NE PAS dessiner la barre de vie ici quand dans buisson
+    } else {
+      // Joueurs hors buisson : dessine normalement
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 15, 0, Math.PI * 2);
+      ctx.fill();
 
-    if (p.ulti.ready) {
-      ctx.fillStyle = 'orange';
-      ctx.font = "20px sans-serif";
-      ctx.fillText("ULTI!", p.x, p.y - 40);
-    }
-  });
+      // Barre de vie au-dessus du joueur
+      const barWidth = 40;
+      const barHeight = 6;
+      const hpRatio = p.hp / 100;
+      ctx.fillStyle = 'gray';
+      ctx.fillRect(p.x - barWidth / 2, p.y - 30, barWidth, barHeight);
+      ctx.fillStyle = 'lime';
+      ctx.fillRect(p.x - barWidth / 2, p.y - 30, barWidth * hpRatio, barHeight);
 
-  // Joueurs hors buisson après (devant)
-  players.filter(p => !isPlayerInBush(p)).forEach(p => {
-    if (p.dead) return;
-    ctx.fillStyle = p.color;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, 15, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Barre de vie au-dessus du joueur
-    const barWidth = 40;
-    const barHeight = 6;
-    const hpRatio = p.hp / 100;
-    ctx.fillStyle = 'gray';
-    ctx.fillRect(p.x - barWidth / 2, p.y - 30, barWidth, barHeight);
-    ctx.fillStyle = 'lime';
-    ctx.fillRect(p.x - barWidth / 2, p.y - 30, barWidth * hpRatio, barHeight);
-
-    if (p.ulti.ready) {
-      ctx.fillStyle = 'orange';
-      ctx.font = "20px sans-serif";
-      ctx.fillText("ULTI!", p.x, p.y - 40);
+      // Affiche ulti prêt
+      if (p.ulti.ready) {
+        ctx.fillStyle = 'orange';
+        ctx.font = "20px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("ULTI!", p.x, p.y - 40);
+        ctx.textAlign = "start";
+      }
     }
   });
 }
+
 
 function startGame() {
   initGame();
