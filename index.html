@@ -1,367 +1,409 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <title>2D FPS Avancé</title>
   <style>
-    body { margin: 0; background: #111; color: white; font-family: sans-serif; text-align: center; }
-    canvas { background: black; display: block; margin: 0 auto; }
-    #menu, #game-over {
-      position: absolute; top: 30%; left: 50%; transform: translateX(-50%); display: none;
+    body {
+      margin: 0;
+      background: #111;
+      color: white;
+      font-family: sans-serif;
+      text-align: center;
     }
-    button { padding: 10px 20px; font-size: 18px; margin-top: 10px; }
-	  #fullscreen-btn {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    z-index: 9999;
-    padding: 10px 15px;
-    font-size: 16px;
-  }
+
+    canvas {
+      background: black;
+      display: block;
+      margin: 0 auto;
+    }
+
+    #menu,
+    #game-over {
+      position: absolute;
+      top: 30%;
+      left: 50%;
+      transform: translateX(-50%);
+      display: none;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 18px;
+      margin-top: 10px;
+    }
+
+    #fullscreen-btn {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 99999;
+      width: 40px;
+      height: 40px;
+      background: url('images/full.png') no-repeat center center;
+      background-size: contain;
+      border: none;
+      cursor: pointer;
+    }
   </style>
 </head>
-<body>
-<button id="fullscreen-btn" onclick="toggleFullscreen()">Plein écran</button>
+<button id="fullscreen-btn" onclick="toggleFullscreen()"></button>
+
 <canvas id="game" width="1200" height="800"></canvas>
+
 <div id="menu">
   <h1>2D FPS Avancé</h1>
   <button onclick="startGame()">Jouer</button>
 </div>
+
 <div id="game-over">
   <h1 id="winner-text"></h1>
   <button onclick="startGame()">Rejouer</button>
 </div>
 <script>
-const wallImg = new Image();
-wallImg.src = 'images/wall.png';
+  const wallImg = new Image();
+  wallImg.src = 'images/wall.png';
 
-const bushImg = new Image();
-bushImg.src = 'images/bush.png';
+  const bushImg = new Image();
+  bushImg.src = 'images/bush.png';
 
-const grassImg = new Image();
-grassImg.src = 'images/grass.png';
+  const grassImg = new Image();
+  grassImg.src = 'images/grass.png';
 
-const waterImg = new Image();
-waterImg.src = 'images/water.png';
+  const waterImg = new Image();
+  waterImg.src = 'images/water.png';
 
-const bonusImages = {
-  damage: new Image(),
-  speed: new Image(),
-  rate: new Image(),
-  range: new Image()
-};
-
-bonusImages.damage.src = 'images/dmg.png';
-bonusImages.speed.src = 'images/speed.png';
-bonusImages.rate.src = 'images/cadence.png';
-bonusImages.range.src = 'images/portee.png';
-
-
-const canvas = document.getElementById('game');
-const ctx = canvas.getContext('2d');
-const menu = document.getElementById('menu');
-const gameOverScreen = document.getElementById('game-over');
-const winnerText = document.getElementById('winner-text');
-
-const TILE_SIZE = 50;
-const SIDE_UI = 100;
-const HUD_HEIGHT = 100;
-
-let GAME_WIDTH = window.innerWidth;
-let GAME_HEIGHT = window.innerHeight - HUD_HEIGHT;
-let MAP_WIDTH = GAME_WIDTH;
-let MAP_HEIGHT = GAME_HEIGHT;
-
-function resizeCanvas() {
-  GAME_WIDTH = window.innerWidth;
-  GAME_HEIGHT = window.innerHeight - HUD_HEIGHT;
-  MAP_WIDTH = GAME_WIDTH;
-  MAP_HEIGHT = GAME_HEIGHT;
-  canvas.width = GAME_WIDTH;
-  canvas.height = GAME_HEIGHT + HUD_HEIGHT;
-}
-window.addEventListener('resize', resizeCanvas);
-resizeCanvas(); // initial sizing
-
-const MAX_LEVEL = 5;
-const baseStats = { damage: 5, speed: 6, rate: 30, range: 500 };
-
-let players, keys, gameRunning = false, frameCount = 0;
-let blocks = [], bushes = [], apples = [], upgrades = [], damageTexts = [];
-let waterBlocks = [];
-
-
-function randomTilePos() {
-  return {
-    x: Math.floor(Math.random() * (MAP_WIDTH / TILE_SIZE)) * TILE_SIZE,
-    y: Math.floor(Math.random() * (MAP_HEIGHT / TILE_SIZE)) * TILE_SIZE
+  const bonusImages = {
+    damage: new Image(),
+    speed: new Image(),
+    rate: new Image(),
+    range: new Image()
   };
-}
+
+  bonusImages.damage.src = 'images/dmg.png';
+  bonusImages.speed.src = 'images/speed.png';
+  bonusImages.rate.src = 'images/cadence.png';
+  bonusImages.range.src = 'images/portee.png';
 
 
-function getProtectedArea(x, y, size = 3) {
-  // Renvoie une liste de tuiles protégées autour du point (x, y)
-  const tiles = [];
-  for (let dx = -size; dx <= size; dx++) {
-    for (let dy = -size; dy <= size; dy++) {
-      tiles.push({ x: x + dx * TILE_SIZE, y: y + dy * TILE_SIZE });
-    }
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const menu = document.getElementById('menu');
+  const gameOverScreen = document.getElementById('game-over');
+  const winnerText = document.getElementById('winner-text');
+
+  const TILE_SIZE = 50;
+  const SIDE_UI = 100;
+  const HUD_HEIGHT = 100;
+
+  let GAME_WIDTH = window.innerWidth;
+  let GAME_HEIGHT = window.innerHeight - HUD_HEIGHT;
+  let MAP_WIDTH = GAME_WIDTH;
+  let MAP_HEIGHT = GAME_HEIGHT;
+
+  function resizeCanvas() {
+    GAME_WIDTH = window.innerWidth;
+    GAME_HEIGHT = window.innerHeight - HUD_HEIGHT;
+    MAP_WIDTH = GAME_WIDTH;
+    MAP_HEIGHT = GAME_HEIGHT;
+    canvas.width = GAME_WIDTH;
+    canvas.height = GAME_HEIGHT + HUD_HEIGHT;
   }
-  return tiles;
-}
+  window.addEventListener('resize', resizeCanvas);
+  resizeCanvas(); // initial sizing
+
+  const MAX_LEVEL = 5;
+  const baseStats = { damage: 5, speed: 6, rate: 30, range: 500 };
+
+  let players, keys, gameRunning = false, frameCount = 0;
+  let blocks = [], bushes = [], apples = [], upgrades = [], damageTexts = [];
+  let waterBlocks = [];
 
 
-function positionFree(x, y, list) {
-  return !list.some(obj =>
-    x < obj.x + TILE_SIZE && x + TILE_SIZE > obj.x &&
-    y < obj.y + TILE_SIZE && y + TILE_SIZE > obj.y
-  );
-}
-
-function createBlocksAvoidingZones(n, protectedZones) {
-  const blockList = [];
-  while (blockList.length < n) {
-    const x = Math.floor(Math.random() * (GAME_WIDTH / TILE_SIZE)) * TILE_SIZE;
-    const y = Math.floor(Math.random() * (GAME_HEIGHT / TILE_SIZE)) * TILE_SIZE + HUD_HEIGHT;
-
-    if (
-      !blockList.some(b => b.x === x && b.y === y) &&
-      !protectedZones.some(p => p.x === x && p.y === y)
-    ) {
-		blockList.push({ x, y, w: TILE_SIZE, h: TILE_SIZE });
-    }
+  function randomTilePos() {
+    return {
+      x: Math.floor(Math.random() * (MAP_WIDTH / TILE_SIZE)) * TILE_SIZE,
+      y: Math.floor(Math.random() * (MAP_HEIGHT / TILE_SIZE)) * TILE_SIZE
+    };
   }
-  return blockList;
-}
 
 
-function createBushes(n = 10) {
-  const bushList = [];
-  for (let i = 0; i < n; i++) {
+  function getProtectedArea(x, y, size = 3) {
+    // Renvoie une liste de tuiles protégées autour du point (x, y)
+    const tiles = [];
+    for (let dx = -size; dx <= size; dx++) {
+      for (let dy = -size; dy <= size; dy++) {
+        tiles.push({ x: x + dx * TILE_SIZE, y: y + dy * TILE_SIZE });
+      }
+    }
+    return tiles;
+  }
+
+
+  function positionFree(x, y, list) {
+    return !list.some(obj =>
+      x < obj.x + TILE_SIZE && x + TILE_SIZE > obj.x &&
+      y < obj.y + TILE_SIZE && y + TILE_SIZE > obj.y
+    );
+  }
+
+  function createBlocksAvoidingZones(n, protectedZones) {
+    const blockList = [];
+    while (blockList.length < n) {
+      const x = Math.floor(Math.random() * (GAME_WIDTH / TILE_SIZE)) * TILE_SIZE;
+      const y = Math.floor(Math.random() * (GAME_HEIGHT / TILE_SIZE)) * TILE_SIZE + HUD_HEIGHT;
+
+      if (
+        !blockList.some(b => b.x === x && b.y === y) &&
+        !protectedZones.some(p => p.x === x && p.y === y)
+      ) {
+        blockList.push({ x, y, w: TILE_SIZE, h: TILE_SIZE });
+      }
+    }
+    return blockList;
+  }
+
+
+  function createBushes(n = 10) {
+    const bushList = [];
+    for (let i = 0; i < n; i++) {
+      let pos;
+      let tries = 0;
+      do {
+        pos = randomTilePos();
+        tries++;
+      } while (!positionFree(pos.x, pos.y, bushList.concat(blocks)) && tries < 100);
+      bushList.push({ x: pos.x, y: pos.y, w: TILE_SIZE, h: TILE_SIZE });
+    }
+    return bushList;
+  }
+
+  function spawnPlayer(blockList) {
     let pos;
     let tries = 0;
     do {
       pos = randomTilePos();
       tries++;
-    } while (!positionFree(pos.x, pos.y, bushList.concat(blocks)) && tries < 100);
-    bushList.push({ x: pos.x, y: pos.y, w: TILE_SIZE, h: TILE_SIZE });
+    } while (!positionFree(pos.x, pos.y, blockList) && tries < 100);
+    return pos;
   }
-  return bushList;
-}
-
-function spawnPlayer(blockList) {
-  let pos;
-  let tries = 0;
-  do {
-    pos = randomTilePos();
-    tries++;
-  } while (!positionFree(pos.x, pos.y, blockList) && tries < 100);
-  return pos;
-}
 
 
-function spawnItem(list, checkList) {
-  let pos;
-  let tries = 0;
-  do {
-    pos = randomTilePos();
-    tries++;
-  } while (
-    (!positionFree(pos.x, pos.y, checkList.concat(list)) ||
-    !positionFree(pos.x, pos.y, waterBlocks.concat(bushes))) &&
-    tries < 100
-  );
-  return { x: pos.x + TILE_SIZE / 2, y: pos.y + TILE_SIZE / 2, radius: 10 };
-}
-
-
-function spawnUpgrade() {
-  const types = ['damage', 'speed', 'rate', 'range'];
-  const type = types[Math.floor(Math.random() * types.length)];
-  const u = spawnItem(upgrades, blocks.concat(apples));
-  return { ...u, type };
-}
-
-function initGame() {
-  const topLeftSpawn = { x: TILE_SIZE, y: HUD_HEIGHT + TILE_SIZE };
-  const bottomRightSpawn = {
-    x: GAME_WIDTH - 2 * TILE_SIZE,
-    y: HUD_HEIGHT + GAME_HEIGHT - 2 * TILE_SIZE,
-  };
-
-  const protectedZones = [
-    ...getProtectedArea(topLeftSpawn.x, topLeftSpawn.y),
-    ...getProtectedArea(bottomRightSpawn.x, bottomRightSpawn.y),
-  ];
-
-  blocks = createBlocksAvoidingZones(30, protectedZones);
-	waterBlocks = createBlocksAvoidingZones(15, protectedZones); // 15 blocs d'eau
-
-
-  players = [
-    {
-      name: "Joueur 1",
-      x: topLeftSpawn.x + TILE_SIZE / 2,
-      y: topLeftSpawn.y + TILE_SIZE / 2,
-      color: "white",
-      keys: { up: 'z', down: 's', left: 'q', right: 'd', ulti: 'Shift' },
-      speed: 2,
-      dx: 0,
-      dy: 0,
-      projectiles: [],
-      stats: { damage: 0, rate: 0, range: 0, speed: 0 },
-      hp: 100,
-      maxHp: 100,
-	  ulti: { charge: 0, active: false, ready: false },
-	  lastShot: 0,
-	  bullets: [],
-
-
-    },
-    {
-      name: "Joueur 2",
-      x: bottomRightSpawn.x + TILE_SIZE / 2,
-      y: bottomRightSpawn.y + TILE_SIZE / 2,
-      color: "cyan",
-      keys: { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight', ulti: 'Enter' },
-      speed: 2,
-      dx: 0,
-      dy: 0,
-      projectiles: [],
-      stats: { damage: 0, rate: 0, range: 0, speed: 0 },
-      hp: 100,
-      maxHp: 100,
-	  ulti: { charge: 0, active: false, ready: false },
-	  lastShot: 0,
-	  bullets: [],
-
-
-    }
-  ];
-
-  keys = {};
-}
-
-
-
-
-document.addEventListener('keydown', e => keys[e.key] = true);
-document.addEventListener('keyup', e => keys[e.key] = false);
-
-function isPlayerInBush(p) {
-  return bushes.some(b =>
-    p.x > b.x && p.x < b.x + TILE_SIZE &&
-    p.y > b.y && p.y < b.y + TILE_SIZE
-  );
-}
-
-function drawDamageText() {
-  ctx.textAlign = "center";
-  damageTexts.forEach((d, i) => {
-    ctx.fillStyle = 'red';
-    ctx.font = 'bold 26px sans-serif';  // plus grand
-    ctx.fillText("-" + d.amount, d.x, d.y);
-    d.y -= 0.8;
-    d.life--;
-  });
-  damageTexts = damageTexts.filter(d => d.life > 0);
-  ctx.textAlign = "start";
-}
-
-function drawHUD() {
-  players.forEach((p, i) => {
-  
-    const x = i === 0 ? 20 : GAME_WIDTH - 200;
-    const y = 20;
-
-    ctx.fillStyle = "white";
-    ctx.font = "14px sans-serif";
-    ctx.fillText(`${p.name} - Ult: ${p.ulti.charge}/75`, x, y + 0);
-    ctx.fillText(`Dégâts: ${baseStats.damage + p.stats.damage}`, x, y + 20);
-    ctx.fillText(`Cadence: ${baseStats.rate - p.stats.rate * 4}`, x, y + 40);
-    ctx.fillText(`Portée: ${baseStats.range + p.stats.range * 30}`, x, y + 60);
-    ctx.fillText(`Vitesse: ${baseStats.speed + p.stats.speed}`, x, y + 80);
-
-    // Barre de vie
-    ctx.fillStyle = "gray";
-    ctx.fillRect(x, y + 100, 100, 10);
-    ctx.fillStyle = "lime";
-    ctx.fillRect(x, y + 100, (p.hp / p.maxHp) * 100, 10);
-  });
-}
-
-
-
-function drawMap() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-for (let y = 0; y < canvas.height; y += TILE_SIZE) {
-  for (let x = 0; x < canvas.width; x += TILE_SIZE) {
-    ctx.drawImage(grassImg, x, y, TILE_SIZE, TILE_SIZE);
+  function spawnItem(list, checkList) {
+    let pos;
+    let tries = 0;
+    do {
+      pos = randomTilePos();
+      tries++;
+    } while (
+      (!positionFree(pos.x, pos.y, checkList.concat(list)) ||
+        !positionFree(pos.x, pos.y, waterBlocks.concat(bushes))) &&
+      tries < 100
+    );
+    return { x: pos.x + TILE_SIZE / 2, y: pos.y + TILE_SIZE / 2, radius: 10 };
   }
-}
-
-	// eau
-waterBlocks.forEach(b => {
-  ctx.drawImage(waterImg, b.x, b.y, TILE_SIZE, TILE_SIZE);
-});
 
 
-  // murs
-  blocks.forEach(b => {
-    ctx.drawImage(wallImg, b.x, b.y, TILE_SIZE, TILE_SIZE);
-  });
+  function spawnUpgrade() {
+    const types = ['damage', 'speed', 'rate', 'range'];
+    const type = types[Math.floor(Math.random() * types.length)];
+    const u = spawnItem(upgrades, blocks.concat(apples));
+    return { ...u, type };
+  }
 
-	bushes.forEach(b => {
-	  ctx.drawImage(bushImg, b.x, b.y, b.w, b.h);
-	});
+  function initGame() {
+    const topLeftSpawn = { x: TILE_SIZE, y: HUD_HEIGHT + TILE_SIZE };
+    const bottomRightSpawn = {
+      x: GAME_WIDTH - 2 * TILE_SIZE,
+      y: HUD_HEIGHT + GAME_HEIGHT - 2 * TILE_SIZE,
+    };
+
+    const protectedZones = [
+      ...getProtectedArea(topLeftSpawn.x, topLeftSpawn.y),
+      ...getProtectedArea(bottomRightSpawn.x, bottomRightSpawn.y),
+    ];
+
+    blocks = createBlocksAvoidingZones(30, protectedZones);
+    waterBlocks = createBlocksAvoidingZones(15, protectedZones); // 15 blocs d'eau
 
 
-  // pommes
-  ctx.fillStyle = 'lime';
-  apples.forEach(a => {
-    ctx.beginPath();
-    ctx.arc(a.x, a.y, a.radius, 0, Math.PI * 2);
-    ctx.fill();
-  });
+    players = [
+      {
+        name: "Joueur 1",
+        x: topLeftSpawn.x + TILE_SIZE / 2,
+        y: topLeftSpawn.y + TILE_SIZE / 2,
+        color: "white",
+        keys: { up: 'z', down: 's', left: 'q', right: 'd', ulti: 'Shift' },
+        speed: 2,
+        dx: 0,
+        dy: 0,
+        projectiles: [],
+        stats: { damage: 0, rate: 0, range: 0, speed: 0 },
+        hp: 100,
+        maxHp: 100,
+        ulti: { charge: 0, active: false, ready: false },
+        lastShot: 0,
+        bullets: [],
 
-  // upgrades
-  drawUpgrades();
-}
 
-function toggleFullscreen() {
-  if (!document.fullscreenElement) {
-    document.documentElement.requestFullscreen().catch(err => {
-      alert(`Erreur plein écran: ${err.message}`);
+      },
+      {
+        name: "Joueur 2",
+        x: bottomRightSpawn.x + TILE_SIZE / 2,
+        y: bottomRightSpawn.y + TILE_SIZE / 2,
+        color: "cyan",
+        keys: { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight', ulti: 'Enter' },
+        speed: 2,
+        dx: 0,
+        dy: 0,
+        projectiles: [],
+        stats: { damage: 0, rate: 0, range: 0, speed: 0 },
+        hp: 100,
+        maxHp: 100,
+        ulti: { charge: 0, active: false, ready: false },
+        lastShot: 0,
+        bullets: [],
+
+
+      }
+    ];
+
+    keys = {};
+  }
+
+
+
+
+  document.addEventListener('keydown', e => keys[e.key] = true);
+  document.addEventListener('keyup', e => keys[e.key] = false);
+
+  function isPlayerInBush(p) {
+    return bushes.some(b =>
+      p.x > b.x && p.x < b.x + TILE_SIZE &&
+      p.y > b.y && p.y < b.y + TILE_SIZE
+    );
+  }
+
+  function drawDamageText() {
+    ctx.textAlign = "center";
+    damageTexts.forEach((d, i) => {
+      ctx.fillStyle = 'red';
+      ctx.font = 'bold 26px sans-serif';  // plus grand
+      ctx.fillText("-" + d.amount, d.x, d.y);
+      d.y -= 0.8;
+      d.life--;
     });
-  } else {
-    document.exitFullscreen();
+    damageTexts = damageTexts.filter(d => d.life > 0);
+    ctx.textAlign = "start";
   }
-}
+
+  function drawHUD() {
+    players.forEach((p, i) => {
+
+      const x = i === 0 ? 20 : GAME_WIDTH - 200;
+      const y = 20;
+
+      ctx.fillStyle = "white";
+      ctx.font = "14px sans-serif";
+      ctx.fillText(`${p.name} - Ult: ${p.ulti.charge}/75`, x, y + 0);
+      ctx.fillText(`Dégâts: ${baseStats.damage + p.stats.damage}`, x, y + 20);
+      ctx.fillText(`Cadence: ${baseStats.rate - p.stats.rate * 4}`, x, y + 40);
+      ctx.fillText(`Portée: ${baseStats.range + p.stats.range * 30}`, x, y + 60);
+      ctx.fillText(`Vitesse: ${baseStats.speed + p.stats.speed}`, x, y + 80);
+
+      // Barre de vie
+      ctx.fillStyle = "gray";
+      ctx.fillRect(x, y + 100, 100, 10);
+      ctx.fillStyle = "lime";
+      ctx.fillRect(x, y + 100, (p.hp / p.maxHp) * 100, 10);
+    });
+  }
 
 
-function drawUpgrades() {
-  upgrades.forEach(u => {
-    const img = bonusImages[u.type];
-    if (img.complete) {
-      ctx.drawImage(img, u.x - 15, u.y - 15, 30, 30);
-    } else {
-      ctx.fillStyle = 'yellow';
-      ctx.fillRect(u.x - 10, u.y - 10, 20, 20);
+
+  function drawMap() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    for (let y = 0; y < canvas.height; y += TILE_SIZE) {
+      for (let x = 0; x < canvas.width; x += TILE_SIZE) {
+        ctx.drawImage(grassImg, x, y, TILE_SIZE, TILE_SIZE);
+      }
     }
-  });
-}
+
+    // eau
+    waterBlocks.forEach(b => {
+      ctx.drawImage(waterImg, b.x, b.y, TILE_SIZE, TILE_SIZE);
+    });
 
 
-function autoShoot(player, target) {
-  if (isPlayerInBush(player)) return; // pas tirer dans buisson
+    // murs
+    blocks.forEach(b => {
+      ctx.drawImage(wallImg, b.x, b.y, TILE_SIZE, TILE_SIZE);
+    });
+
+    bushes.forEach(b => {
+      ctx.drawImage(bushImg, b.x, b.y, b.w, b.h);
+    });
+
+
+    // pommes
+    ctx.fillStyle = 'lime';
+    apples.forEach(a => {
+      ctx.beginPath();
+      ctx.arc(a.x, a.y, a.radius, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    // upgrades
+    drawUpgrades();
+  }
+
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(err => {
+        alert(`Erreur plein écran: ${err.message}`);
+      });
+    } else {
+      document.exitFullscreen();
+    }
+  }
+
+
+  function drawUpgrades() {
+    upgrades.forEach(u => {
+      const img = bonusImages[u.type];
+      if (img.complete) {
+        ctx.drawImage(img, u.x - 15, u.y - 15, 30, 30);
+      } else {
+        ctx.fillStyle = 'yellow';
+        ctx.fillRect(u.x - 10, u.y - 10, 20, 20);
+      }
+    });
+  }
+
+
+  function autoShoot(player, target) {
+  if (isPlayerInBush(player)) return; // pas tirer si on est soi-même dans un buisson
+
   const now = frameCount;
   const rate = baseStats.rate - player.stats.rate * 4;
   if (now - player.lastShot < rate) return;
   player.lastShot = now;
 
-  const dx = target.x - player.x;
-  const dy = target.y - player.y;
-  const angle = Math.atan2(dy, dx);
+  let angle;
+
+  if (isPlayerInBush(target)) {
+    // La cible est dans un buisson -> tirer dans une direction aléatoire proche sans viser directement
+    const randomOffset = (Math.random() - 0.5) * Math.PI * 2; // angle aléatoire 360°
+    angle = randomOffset;
+  } else {
+    // Cible visible -> viser directement
+    const dx = target.x - player.x;
+    const dy = target.y - player.y;
+    angle = Math.atan2(dy, dx);
+  }
+
   const speed = baseStats.speed + player.stats.speed;
   const damage = baseStats.damage + player.stats.damage;
   const range = baseStats.range + player.stats.range * 30;
@@ -378,267 +420,268 @@ function autoShoot(player, target) {
 }
 
 
-function useUltimate(player, target) {
-  if (!player.ulti.ready) return;
-  const dx = target.x - player.x;
-  const dy = target.y - player.y;
-  const angle = Math.atan2(dy, dx);
-  const speed = 10;
-  // Ulti multi-proj
-  for (let i = -2; i <= 2; i++) {
-    const spread = angle + (i * 0.1);
-    player.bullets.push({
-      x: player.x, y: player.y,
-      dx: Math.cos(spread) * speed,
-      dy: Math.sin(spread) * speed,
-      distance: 0,
-      damage: 30,
-      maxDistance: 500,
-      ulti: true
-    });
-  }
-  player.ulti.charge = 0;
-  player.ulti.ready = false;
-  damageTexts.push({ x: player.x, y: player.y, amount: "ULTI!", life: 30 });
-}
 
-function updateBullets() {
-  players.forEach(player => {
-    for (let i = player.bullets.length - 1; i >= 0; i--) {
-      const b = player.bullets[i];
-      b.x += b.dx;
-      b.y += b.dy;
-      b.distance += Math.sqrt(b.dx * b.dx + b.dy * b.dy);
-
-      // Limite portée
-      if (b.distance > b.maxDistance) {
-        player.bullets.splice(i, 1);
-        continue;
-      }
-
-      // Collision avec murs
-      let hitWall = false;
-      for (const block of blocks.concat(waterBlocks)) {
-        if (
-          b.x > block.x &&
-          b.x < block.x + block.w &&
-          b.y > block.y &&
-          b.y < block.y + block.h
-        ) {
-          hitWall = true;
-          break;
-        }
-      }
-      if (hitWall) {
-        player.bullets.splice(i, 1);
-        continue;
-      }
-
-      // Collision avec joueur adverse
-      players.forEach(target => {
-        if (target !== player && !target.dead &&
-            b.x > target.x - 15 && b.x < target.x + 15 &&
-            b.y > target.y - 15 && b.y < target.y + 15) {
-          target.hp -= b.damage;
-          player.ulti.charge += b.damage * 2;
-          if (player.ulti.charge >= 75) {
-            player.ulti.charge = 75;
-            player.ulti.ready = true;
-          }
-          damageTexts.push({ x: target.x, y: target.y, amount: b.damage, life: 30 });
-          player.bullets.splice(i, 1);
-          if (target.hp <= 0) {
-            target.dead = true;
-            checkGameOver();
-          }
-        }
+  function useUltimate(player, target) {
+    if (!player.ulti.ready) return;
+    const dx = target.x - player.x;
+    const dy = target.y - player.y;
+    const angle = Math.atan2(dy, dx);
+    const speed = 10;
+    // Ulti multi-proj
+    for (let i = -2; i <= 2; i++) {
+      const spread = angle + (i * 0.1);
+      player.bullets.push({
+        x: player.x, y: player.y,
+        dx: Math.cos(spread) * speed,
+        dy: Math.sin(spread) * speed,
+        distance: 0,
+        damage: 30,
+        maxDistance: 500,
+        ulti: true
       });
     }
-  });
-}
-
-function canMoveTo(p, newX, newY) {
-  // vérifier collision avec murs
-  if (newX < 0 || newX > MAP_WIDTH || newY < 0 || newY > MAP_HEIGHT) return false;
-
-for (const b of blocks.concat(waterBlocks)) {
-  if (
-    newX + 15 > b.x && newX - 15 < b.x + b.w &&
-    newY + 15 > b.y && newY - 15 < b.y + b.h
-  ) {
-    return false;
+    player.ulti.charge = 0;
+    player.ulti.ready = false;
+    damageTexts.push({ x: player.x, y: player.y, amount: "ULTI!", life: 30 });
   }
-}
+
+  function updateBullets() {
+    players.forEach(player => {
+      for (let i = player.bullets.length - 1; i >= 0; i--) {
+        const b = player.bullets[i];
+        b.x += b.dx;
+        b.y += b.dy;
+        b.distance += Math.sqrt(b.dx * b.dx + b.dy * b.dy);
+
+        // Limite portée
+        if (b.distance > b.maxDistance) {
+          player.bullets.splice(i, 1);
+          continue;
+        }
+
+        // Collision avec murs (mais PAS l'eau)
+        let hitWall = false;
+        for (const block of blocks) { // <-- Plus de .concat(waterBlocks)
+          if (
+            b.x > block.x &&
+            b.x < block.x + block.w &&
+            b.y > block.y &&
+            b.y < block.y + block.h
+          ) {
+            hitWall = true;
+            break;
+          }
+        }
+        if (hitWall) {
+          player.bullets.splice(i, 1);
+          continue;
+        }
+
+        // Collision avec joueur adverse
+        players.forEach(target => {
+          if (target !== player && !target.dead &&
+            b.x > target.x - 15 && b.x < target.x + 15 &&
+            b.y > target.y - 15 && b.y < target.y + 15) {
+            target.hp -= b.damage;
+            player.ulti.charge += b.damage * 2;
+            if (player.ulti.charge >= 75) {
+              player.ulti.charge = 75;
+              player.ulti.ready = true;
+            }
+            damageTexts.push({ x: target.x, y: target.y, amount: b.damage, life: 30 });
+            player.bullets.splice(i, 1);
+            if (target.hp <= 0) {
+              target.dead = true;
+              checkGameOver();
+            }
+          }
+        });
+      }
+    });
+  }
 
 
-  for (const b of blocks) {
+  function canMoveTo(p, newX, newY) {
+    const radius = 15;
+
+    // Limites de l'écran
     if (
-      newX + 15 > b.x && newX - 15 < b.x + b.w &&
-      newY + 15 > b.y && newY - 15 < b.y + b.h
+      newX - radius < 0 ||
+      newX + radius > GAME_WIDTH ||
+      newY - radius < 0 ||                            // <-- haut à 0
+      newY + radius > GAME_HEIGHT + HUD_HEIGHT       // bas à hauteur totale
     ) {
       return false;
     }
+
+    // Collisions avec blocs et eau
+    for (const b of blocks.concat(waterBlocks)) {
+      if (
+        newX + radius > b.x && newX - radius < b.x + b.w &&
+        newY + radius > b.y && newY - radius < b.y + b.h
+      ) {
+        return false;
+      }
+    }
+
+    return true;
   }
-  return true;
-}
 
-function movePlayers() {
-  players.forEach(p => {
-    if (p.dead) return;
-    const speed = baseStats.speed + p.stats.speed;
 
-    if (keys[p.keys.up]) {
-      let newY = p.y - speed;
-      if (canMoveTo(p, p.x, newY)) p.y = newY;
-    }
-    if (keys[p.keys.down]) {
-      let newY = p.y + speed;
-      if (canMoveTo(p, p.x, newY)) p.y = newY;
-    }
-    if (keys[p.keys.left]) {
-      let newX = p.x - speed;
-      if (canMoveTo(p, newX, p.y)) p.x = newX;
-    }
-    if (keys[p.keys.right]) {
-      let newX = p.x + speed;
-      if (canMoveTo(p, newX, p.y)) p.x = newX;
-    }
+  function movePlayers() {
+    players.forEach(p => {
+      if (p.dead) return;
+      const speed = baseStats.speed + p.stats.speed;
 
-    // Clamp au bord du canvas
-    p.x = Math.min(MAP_WIDTH - 1, Math.max(1, p.x));
-    p.y = Math.min(MAP_HEIGHT - 1, Math.max(1, p.y));
+      if (keys[p.keys.up]) {
+        let newY = p.y - speed;
+        if (canMoveTo(p, p.x, newY)) p.y = newY;
+      }
+      if (keys[p.keys.down]) {
+        let newY = p.y + speed;
+        if (canMoveTo(p, p.x, newY)) p.y = newY;
+      }
+      if (keys[p.keys.left]) {
+        let newX = p.x - speed;
+        if (canMoveTo(p, newX, p.y)) p.x = newX;
+      }
+      if (keys[p.keys.right]) {
+        let newX = p.x + speed;
+        if (canMoveTo(p, newX, p.y)) p.x = newX;
+      }
 
-    // Utilisation ulti uniquement hors buisson
-    if (keys[p.keys.ulti] && !isPlayerInBush(p)) {
-      const enemy = players.find(pl => pl !== p && !pl.dead);
-      if (enemy) useUltimate(p, enemy);
-      keys[p.keys.ulti] = false;
-    }
-  });
-}
-
-function checkGameOver() {
-  const alive = players.filter(p => !p.dead);
-  if (alive.length <= 1) {
-    gameRunning = false;
-    winnerText.textContent = alive.length === 1 ? `${alive[0].name} a gagné !` : "Match nul !";
-    gameOverScreen.style.display = 'block';
+      // Utilisation ulti uniquement hors buisson
+      if (keys[p.keys.ulti] && !isPlayerInBush(p)) {
+        const enemy = players.find(pl => pl !== p && !pl.dead);
+        if (enemy) useUltimate(p, enemy);
+        keys[p.keys.ulti] = false;
+      }
+    });
   }
-}
 
-function update() {
-  if (!gameRunning) return;
-  frameCount++;
-  movePlayers();
-  updateBullets();
-
-  // Auto shoot pour chaque joueur, vise le joueur adverse (simplifié)
-  players.forEach(p => {
-    if (!p.dead) {
-      const enemy = players.find(pl => pl !== p && !pl.dead);
-      if (enemy) autoShoot(p, enemy);
+  function checkGameOver() {
+    const alive = players.filter(p => !p.dead);
+    if (alive.length <= 1) {
+      gameRunning = false;
+      winnerText.textContent = alive.length === 1 ? `${alive[0].name} a gagné !` : "Match nul !";
+      gameOverScreen.style.display = 'block';
     }
-  });
-  // Ramasser pommes et upgrades
-  players.forEach(p => {
-    apples.forEach((a, i) => {
-      if (Math.hypot(p.x - a.x, p.y - a.y) < a.radius + 15) {
-        p.hp = Math.min(p.maxHp, p.hp + 20);
-        apples.splice(i, 1);
-        apples.push(spawnItem(apples, blocks));
+  }
+
+  function update() {
+    if (!gameRunning) return;
+    frameCount++;
+    movePlayers();
+    updateBullets();
+
+    // Auto shoot pour chaque joueur, vise le joueur adverse (simplifié)
+    players.forEach(p => {
+      if (!p.dead) {
+        const enemy = players.find(pl => pl !== p && !pl.dead);
+        if (enemy) autoShoot(p, enemy);
       }
     });
-    upgrades.forEach((u, i) => {
-      if (Math.hypot(p.x - u.x, p.y - u.y) < 20) {
-        p.stats[u.type] = Math.min(MAX_LEVEL, p.stats[u.type] + 1);
-        upgrades.splice(i, 1);
-        upgrades.push(spawnUpgrade());
+    // Ramasser pommes et upgrades
+    players.forEach(p => {
+      apples.forEach((a, i) => {
+        if (Math.hypot(p.x - a.x, p.y - a.y) < a.radius + 15) {
+          p.hp = Math.min(p.maxHp, p.hp + 20);
+          apples.splice(i, 1);
+          apples.push(spawnItem(apples, blocks));
+        }
+      });
+      upgrades.forEach((u, i) => {
+        if (Math.hypot(p.x - u.x, p.y - u.y) < 20) {
+          p.stats[u.type] = Math.min(MAX_LEVEL, p.stats[u.type] + 1);
+          upgrades.splice(i, 1);
+          upgrades.push(spawnUpgrade());
+        }
+      });
+    });
+
+    drawMap();
+    drawPlayers();
+    drawBullets();
+    drawDamageText();
+    drawHUD();
+  }
+
+  function drawPlayers() {
+    players.forEach(p => {
+      if (p.dead) return;
+
+      if (isPlayerInBush(p)) {
+        // Joueurs dans buisson : dessine joueur avec transparence
+        ctx.globalAlpha = 0.05;
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 15, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+
+        // NE PAS dessiner la barre de vie ici quand dans buisson
+      } else {
+        // Joueurs hors buisson : dessine normalement
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 15, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Barre de vie au-dessus du joueur
+        const barWidth = 40;
+        const barHeight = 6;
+        const hpRatio = p.hp / 100;
+        ctx.fillStyle = 'gray';
+        ctx.fillRect(p.x - barWidth / 2, p.y - 30, barWidth, barHeight);
+        ctx.fillStyle = 'lime';
+        ctx.fillRect(p.x - barWidth / 2, p.y - 30, barWidth * hpRatio, barHeight);
+
+        // Affiche ulti prêt
+        if (p.ulti.ready) {
+          ctx.fillStyle = 'orange';
+          ctx.font = "20px sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText("ULTI!", p.x, p.y - 40);
+          ctx.textAlign = "start";
+        }
       }
     });
-  });
-
-  drawMap();
-  drawPlayers();
-  drawBullets();
-  drawDamageText();
-  drawHUD();
-}
-
-function drawPlayers() {
-  players.forEach(p => {
-    if (p.dead) return;
-
-    if (isPlayerInBush(p)) {
-      // Joueurs dans buisson : dessine joueur avec transparence
-      ctx.globalAlpha = 0.05;
-      ctx.fillStyle = p.color;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, 15, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.globalAlpha = 1;
-
-      // NE PAS dessiner la barre de vie ici quand dans buisson
-    } else {
-      // Joueurs hors buisson : dessine normalement
-      ctx.fillStyle = p.color;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, 15, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Barre de vie au-dessus du joueur
-      const barWidth = 40;
-      const barHeight = 6;
-      const hpRatio = p.hp / 100;
-      ctx.fillStyle = 'gray';
-      ctx.fillRect(p.x - barWidth / 2, p.y - 30, barWidth, barHeight);
-      ctx.fillStyle = 'lime';
-      ctx.fillRect(p.x - barWidth / 2, p.y - 30, barWidth * hpRatio, barHeight);
-
-      // Affiche ulti prêt
-      if (p.ulti.ready) {
-        ctx.fillStyle = 'orange';
-        ctx.font = "20px sans-serif";
-        ctx.textAlign = "center";
-        ctx.fillText("ULTI!", p.x, p.y - 40);
-        ctx.textAlign = "start";
-      }
-    }
-  });
-}
+  }
 
 
-function startGame() {
-  initGame();
-  bushes = createBushes(30);
-  apples = [spawnItem([], blocks)];
-  upgrades = [spawnUpgrade()];
-  damageTexts = [];
-  menu.style.display = 'none';
-  gameOverScreen.style.display = 'none';
-  gameRunning = true;
-  requestAnimationFrame(gameLoop);
-}
+  function startGame() {
+    initGame();
+    bushes = createBushes(60);
+    apples = [spawnItem([], blocks)];
+    upgrades = [spawnUpgrade()];
+    damageTexts = [];
+    menu.style.display = 'none';
+    gameOverScreen.style.display = 'none';
+    gameRunning = true;
+    requestAnimationFrame(gameLoop);
+  }
 
 
-function drawBullets() {
-  players.forEach(p => {
-    p.bullets.forEach(b => {
-      ctx.fillStyle = b.ulti ? 'orange' : 'white';
-      ctx.beginPath();
-      ctx.arc(b.x, b.y, 4, 0, Math.PI * 2);
-      ctx.fill();
+  function drawBullets() {
+    players.forEach(p => {
+      p.bullets.forEach(b => {
+        ctx.fillStyle = b.ulti ? 'orange' : 'white';
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, 4, 0, Math.PI * 2);
+        ctx.fill();
+      });
     });
-  });
-}
+  }
 
 
-function gameLoop() {
-  update();
-  if (gameRunning) requestAnimationFrame(gameLoop);
-}
+  function gameLoop() {
+    update();
+    if (gameRunning) requestAnimationFrame(gameLoop);
+  }
 
 
-menu.style.display = 'block';
+  menu.style.display = 'block';
 </script>
 </body>
+
 </html>
