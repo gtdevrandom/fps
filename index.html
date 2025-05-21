@@ -74,6 +74,9 @@
   const waterImg = new Image();
   waterImg.src = 'images/water.png';
 
+const appleImg = new Image();
+appleImg.src = 'images/apple.png';
+
   const bonusImages = {
     damage: new Image(),
     speed: new Image(),
@@ -347,13 +350,17 @@
     });
 
 
-    // pommes
+apples.forEach(a => {
+  if (appleImg.complete) {
+    ctx.drawImage(appleImg, a.x - 15, a.y - 15, 30, 30); // 30x30 px
+  } else {
     ctx.fillStyle = 'lime';
-    apples.forEach(a => {
-      ctx.beginPath();
-      ctx.arc(a.x, a.y, a.radius, 0, Math.PI * 2);
-      ctx.fill();
-    });
+    ctx.beginPath();
+    ctx.arc(a.x, a.y, a.radius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+});
+
 
     // upgrades
     drawUpgrades();
